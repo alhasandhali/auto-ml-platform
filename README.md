@@ -1,5 +1,8 @@
 # AI Auto ML Platform 🚀
 
+> **🚧 Work in Progress**
+> This project is currently under active development and is not yet complete. Features, UI, and documentation are subject to change.
+
 A modern, intelligent Data Science dashboard built with Next.js that empowers users to seamlessly upload datasets, visualize statistical properties, and instantly generate comprehensive data science reports using local AI inference.
 
 ## 🌟 Features
