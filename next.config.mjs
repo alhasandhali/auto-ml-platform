@@ -18,7 +18,7 @@ const nextConfig = {
       },
       {
         source: '/api/auth/:path*',
-        destination: `${process.env.AUTH_API_URL || 'http://localhost:8000'}/:path*`,
+        destination: `${process.env.AUTH_API_URL || 'https://auth-api-fastapi-2ls5.onrender.com'}/:path*`,
       },
     ]
   },
