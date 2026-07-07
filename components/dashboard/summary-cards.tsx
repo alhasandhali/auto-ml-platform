@@ -26,7 +26,7 @@ function computeStats(dataset: ReturnType<typeof useDataset>["dataset"]) {
   const { apiSummary } = dataset
   
   // Calculate total missing values from API response
-  const totalMissing = Object.values(apiSummary.missing_values || {}).reduce((a: number, b: any) => a + b, 0)
+  const totalMissing = (apiSummary.column_info || []).reduce((acc: number, col: any) => acc + (col.missing_values || 0), 0)
   const totalCells = apiSummary.rows * apiSummary.columns
   const missingPct = totalCells > 0 ? ((totalMissing / totalCells) * 100).toFixed(1) : "0"
   

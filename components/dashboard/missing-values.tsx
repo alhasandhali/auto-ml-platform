@@ -23,12 +23,12 @@ export function MissingValues() {
     let total = 0
     const perColumn: { column: string; pct: number }[] = []
 
-    for (const [col, missing] of Object.entries(apiSummary.missing_values || {})) {
-      total += (missing as number)
-      if (missing > 0) {
+    for (const colInfo of (apiSummary.column_info || [])) {
+      total += (colInfo.missing_values || 0)
+      if (colInfo.missing_values > 0) {
         perColumn.push({
-          column: col,
-          pct: +(apiSummary.missing_percentage[col]).toFixed(1),
+          column: colInfo.column_name,
+          pct: colInfo.missing_percentage || 0,
         })
       }
     }
