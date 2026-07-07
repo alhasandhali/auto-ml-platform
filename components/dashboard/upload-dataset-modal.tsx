@@ -146,8 +146,8 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
       const formData = new FormData()
       formData.append("file", file)
       
-      // Send to Next.js API proxy to avoid CORS issues
-      const res = await fetch("/api/analyze", {
+      // Send directly to Render backend to avoid Vercel 10s timeout and 4.5MB payload limit
+      const res = await fetch("https://dataset-api-fastapi.onrender.com/analyze", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`
@@ -166,7 +166,7 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
       if (initialResponse.task_id) {
         const taskId = initialResponse.task_id;
         while (true) {
-          const pollRes = await fetch(`/api/tasks/${taskId}`, {
+          const pollRes = await fetch(`https://dataset-api-fastapi.onrender.com/tasks/${taskId}`, {
             headers: {
               "Authorization": `Bearer ${token}`
             }
