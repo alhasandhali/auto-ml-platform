@@ -143,6 +143,7 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
       // Send to FastAPI backend
       const formData = new FormData()
       formData.append("file", file)
+      formData.append("user_id", "default_user") // Required by backend
       
       // Send to Next.js API proxy to avoid CORS issues
       const res = await fetch("/api/analyze", {
