@@ -37,8 +37,20 @@ export default function SignupPage() {
       return
     }
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters")
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters")
+      setIsLoading(false)
+      return
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      setError("Password must contain at least one uppercase letter")
+      setIsLoading(false)
+      return
+    }
+
+    if (!/[0-9]/.test(password)) {
+      setError("Password must contain at least one digit")
       setIsLoading(false)
       return
     }
@@ -70,7 +82,15 @@ export default function SignupPage() {
 
       if (!registerRes.ok) {
         const errData = await registerRes.json().catch(() => ({}))
-        throw new Error(errData.detail || "Signup failed")
+        let errorMsg = "Signup failed"
+        if (errData.detail) {
+          if (Array.isArray(errData.detail)) {
+            errorMsg = errData.detail.map((e: any) => e.msg).join(", ")
+          } else {
+            errorMsg = errData.detail
+          }
+        }
+        throw new Error(errorMsg)
       }
       
       // 2. Automatically login
