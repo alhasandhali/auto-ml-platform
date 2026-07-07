@@ -154,7 +154,26 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
         throw new Error("Failed to analyze dataset on the server.")
       }
       
-      const apiSummary = await res.json()
+      const initialResponse = await res.json()
+      let apiSummary;
+
+      if (initialResponse.task_id) {
+        const taskId = initialResponse.task_id;
+        while (true) {
+          const pollRes = await fetch(`/api/tasks/${taskId}`);
+          if (!pollRes.ok) throw new Error("Failed to fetch task status.");
+          const pollData = await pollRes.json();
+          if (pollData.status === "completed") {
+            apiSummary = pollData.result;
+            break;
+          } else if (pollData.status === "failed") {
+            throw new Error(pollData.error || "Analysis failed.");
+          }
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+      } else {
+        apiSummary = initialResponse;
+      }
 
       // For preview purposes, if it's a CSV we still parse the first few rows locally. 
       // If it's Excel, we just show empty preview for now, but API summary will work!
