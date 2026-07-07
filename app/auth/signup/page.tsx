@@ -93,42 +93,8 @@ export default function SignupPage() {
         throw new Error(errorMsg)
       }
       
-      // 2. Automatically login
-      const formData = new URLSearchParams()
-      formData.append("username", username)
-      formData.append("password", password)
-
-      const loginRes = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: formData.toString(),
-      })
-
-      if (!loginRes.ok) {
-        throw new Error("Account created, but automatic login failed. Please sign in manually.")
-      }
-
-      const loginData = await loginRes.json()
-      
-      // Fetch user profile using the token
-      const profileRes = await fetch("/api/auth/profile", {
-        headers: { Authorization: `Bearer ${loginData.access_token}` },
-      })
-      
-      if (!profileRes.ok) {
-        throw new Error("Failed to fetch user profile")
-      }
-      
-      const userProfile = await profileRes.json()
-      
-      // Store auth token in context/localStorage
-      login(loginData.access_token, {
-        username: userProfile.username,
-        role: userProfile.role,
-        email: userProfile.email,
-      })
-
-      router.push("/dashboard")
+      // Redirect to login page on success
+      router.push("/auth/login?registered=true")
     } catch (err: any) {
       setError(err.message || "Signup failed. Please try again.")
     } finally {
