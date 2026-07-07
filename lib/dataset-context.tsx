@@ -35,11 +35,34 @@ export interface DatasetInfo {
   apiSummary?: ApiSummary
 }
 
+// ── Saved Dataset type (from MongoDB) ──────────────────────────────────────────
+export interface SavedDataset {
+  _id: string
+  user_id: string
+  metadata: {
+    name: string
+    description: string | null
+    file_type: string
+    row_count: number
+    column_count: number
+    columns: string[]
+    uploaded_at: string
+  }
+  s3_key: string
+}
+
 interface DatasetContextValue {
   dataset: DatasetInfo | null
   setDataset: (info: DatasetInfo) => void
   clearDataset: () => void
   isUploaded: boolean
+
+  // Saved datasets library
+  savedDatasets: SavedDataset[]
+  isLoadingList: boolean
+  fetchSavedDatasets: (token: string) => Promise<void>
+  deleteSavedDataset: (id: string, token: string) => Promise<boolean>
+  loadSavedAnalysis: (analysisId: string, token: string) => Promise<boolean>
 }
 
 const DatasetContext = createContext<DatasetContextValue | null>(null)
@@ -106,9 +129,16 @@ export function parseCSV(text: string): { columns: string[]; rows: ParsedRow[] }
   return { columns, rows }
 }
 
+// ── Backend URL ────────────────────────────────────────────────────────────────
+const BACKEND_URL = "https://dataset-api-fastapi.onrender.com"
+
 // ── Provider ───────────────────────────────────────────────────────────────────
 export function DatasetProvider({ children }: { children: ReactNode }) {
   const [dataset, setDatasetState] = useState<DatasetInfo | null>(null)
+
+  // Saved datasets library state
+  const [savedDatasets, setSavedDatasets] = useState<SavedDataset[]>([])
+  const [isLoadingList, setIsLoadingList] = useState(false)
 
   const setDataset = useCallback((info: DatasetInfo) => {
     setDatasetState(info)
@@ -118,6 +148,72 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
     setDatasetState(null)
   }, [])
 
+  // Fetch saved datasets from backend
+  const fetchSavedDatasets = useCallback(async (token: string) => {
+    setIsLoadingList(true)
+    try {
+      const res = await fetch(`${BACKEND_URL}/datasets?limit=100`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error("Failed to fetch datasets")
+      const data = await res.json()
+      setSavedDatasets(data.datasets || [])
+    } catch (err) {
+      console.error("Error fetching datasets:", err)
+    } finally {
+      setIsLoadingList(false)
+    }
+  }, [])
+
+  // Delete a saved dataset
+  const deleteSavedDataset = useCallback(async (id: string, token: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/datasets/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error("Failed to delete dataset")
+      // Remove from local state
+      setSavedDatasets((prev) => prev.filter((d) => d._id !== id))
+      return true
+    } catch (err) {
+      console.error("Error deleting dataset:", err)
+      return false
+    }
+  }, [])
+
+  // Load a saved analysis into the context
+  const loadSavedAnalysis = useCallback(async (analysisId: string, token: string): Promise<boolean> => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/analyses/${analysisId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error("Failed to load analysis")
+      const doc = await res.json()
+      
+      if (!doc.analysis) return false
+
+      const analysis = doc.analysis
+      const columns = (analysis.column_info || []).map((c: any) => c.column_name)
+
+      setDatasetState({
+        fileName: doc.filename || "Saved Dataset",
+        fileSize: 0,
+        uploadedAt: new Date(doc.created_at || Date.now()),
+        columns,
+        rows: [], // No raw rows from saved analysis
+        totalRows: analysis.rows || 0,
+        totalColumns: analysis.columns || 0,
+        apiSummary: analysis,
+      })
+
+      return true
+    } catch (err) {
+      console.error("Error loading analysis:", err)
+      return false
+    }
+  }, [])
+
   return (
     <DatasetContext.Provider
       value={{
@@ -125,6 +221,12 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
         setDataset,
         clearDataset,
         isUploaded: dataset !== null,
+
+        savedDatasets,
+        isLoadingList,
+        fetchSavedDatasets,
+        deleteSavedDataset,
+        loadSavedAnalysis,
       }}
     >
       {children}

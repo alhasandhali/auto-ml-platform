@@ -1,11 +1,15 @@
 "use client"
 
 import { useState } from "react"
-import { Upload, ChevronRight, Clock, CalendarDays } from "lucide-react"
+import { Upload, ChevronRight, Clock, CalendarDays, ArrowLeft } from "lucide-react"
 import { useDataset } from "@/lib/dataset-context"
 import { UploadDatasetModal } from "./upload-dataset-modal"
 
-export function DatasetHeader() {
+interface DatasetHeaderProps {
+  onBackToLibrary?: () => void
+}
+
+export function DatasetHeader({ onBackToLibrary }: DatasetHeaderProps) {
   const { dataset, isUploaded } = useDataset()
   const [showUpload, setShowUpload] = useState(false)
 
@@ -25,8 +29,22 @@ export function DatasetHeader() {
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-2">
           <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <span>{isUploaded ? "Uploaded Dataset" : "Customer Churn"}</span>
-            <ChevronRight className="h-3.5 w-3.5" />
+            {onBackToLibrary && (
+              <button
+                onClick={onBackToLibrary}
+                className="flex items-center gap-1 text-primary font-medium hover:underline underline-offset-2 transition-colors"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                My Datasets
+              </button>
+            )}
+            {onBackToLibrary && <ChevronRight className="h-3.5 w-3.5" />}
+            {!onBackToLibrary && (
+              <>
+                <span>{isUploaded ? "Uploaded Dataset" : "Customer Churn"}</span>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </>
+            )}
             <span className="font-medium text-foreground">Dataset Analysis</span>
           </nav>
           <h1 className="text-2xl font-semibold tracking-tight text-balance">

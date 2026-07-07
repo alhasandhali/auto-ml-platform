@@ -9,6 +9,7 @@ import {
   AlertCircle,
   Trash2,
   Loader2,
+  Save,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useDataset, parseCSV } from "@/lib/dataset-context"
@@ -22,6 +23,7 @@ const ACCEPTED_TYPES = [
 ]
 const ACCEPTED_EXTENSIONS = [".csv", ".xls", ".xlsx"]
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50 MB
+const BACKEND_URL = "https://dataset-api-fastapi.onrender.com"
 
 type UploadState = "idle" | "uploading" | "success" | "error"
 
@@ -31,15 +33,18 @@ interface UploadDatasetModalProps {
 }
 
 export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
-  const { setDataset } = useDataset()
+  const { setDataset, fetchSavedDatasets } = useDataset()
   const { token } = useAuth()
   const [file, setFile] = useState<File | null>(null)
+  const [datasetName, setDatasetName] = useState("")
   const [dragOver, setDragOver] = useState(false)
   const [uploadState, setUploadState] = useState<UploadState>("idle")
   const [progress, setProgress] = useState(0)
+  const [statusMessage, setStatusMessage] = useState("Uploading dataset...")
   const [errorMsg, setErrorMsg] = useState("")
   const [rowCount, setRowCount] = useState(0)
   const [colCount, setColCount] = useState(0)
+  const [savedToLibrary, setSavedToLibrary] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
 
@@ -59,11 +64,14 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
   useEffect(() => {
     if (open) {
       setFile(null)
+      setDatasetName("")
       setUploadState("idle")
       setProgress(0)
+      setStatusMessage("Uploading dataset...")
       setErrorMsg("")
       setRowCount(0)
       setColCount(0)
+      setSavedToLibrary(false)
     }
   }, [open])
 
@@ -104,8 +112,13 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
       setFile(f)
       setUploadState("idle")
       setErrorMsg("")
+      // Default dataset name to filename without extension
+      if (!datasetName) {
+        const nameWithoutExt = f.name.replace(/\.[^.]+$/, "")
+        setDatasetName(nameWithoutExt)
+      }
     },
-    [validateFile],
+    [validateFile, datasetName],
   )
 
   const handleDrop = useCallback(
@@ -132,27 +145,28 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
     setUploadState("uploading")
     setProgress(0)
     setErrorMsg("")
+    setSavedToLibrary(false)
 
     try {
       // Start progress animation
+      setStatusMessage("Uploading & analyzing dataset...")
       const progressInterval = setInterval(() => {
         setProgress((p) => {
           const inc = Math.random() * 15 + 5
-          return p + inc >= 90 ? 90 : p + inc
+          return p + inc >= 70 ? 70 : p + inc
         })
       }, 300)
 
-      // Send to FastAPI backend
-      const formData = new FormData()
-      formData.append("file", file)
+      // ── Step 1: Analyze ──────────────────────────────────────────
+      const analyzeForm = new FormData()
+      analyzeForm.append("file", file)
       
-      // Send directly to Render backend to avoid Vercel 10s timeout and 4.5MB payload limit
-      const res = await fetch("https://dataset-api-fastapi.onrender.com/analyze", {
+      const res = await fetch(`${BACKEND_URL}/analyze`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${token}`
         },
-        body: formData,
+        body: analyzeForm,
       })
       
       if (!res.ok) {
@@ -162,11 +176,13 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
       
       const initialResponse = await res.json()
       let apiSummary;
+      const taskId = initialResponse.task_id;
+      const s3Key = initialResponse.s3_key;
 
-      if (initialResponse.task_id) {
-        const taskId = initialResponse.task_id;
+      if (taskId) {
+        setStatusMessage("Processing analysis...")
         while (true) {
-          const pollRes = await fetch(`https://dataset-api-fastapi.onrender.com/tasks/${taskId}`, {
+          const pollRes = await fetch(`${BACKEND_URL}/tasks/${taskId}`, {
             headers: {
               "Authorization": `Bearer ${token}`
             }
@@ -185,8 +201,40 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
         apiSummary = initialResponse;
       }
 
-      // For preview purposes, if it's a CSV we still parse the first few rows locally. 
-      // If it's Excel, we just show empty preview for now, but API summary will work!
+      setProgress(75)
+      setStatusMessage("Saving to your library...")
+
+      // ── Step 2: Save to library ──────────────────────────────────
+      try {
+        const saveForm = new FormData()
+        saveForm.append("file", file)
+        if (datasetName.trim()) {
+          saveForm.append("name", datasetName.trim())
+        }
+        if (taskId) saveForm.append("analysis_id", taskId)
+        if (s3Key) saveForm.append("s3_key", s3Key)
+
+        const saveRes = await fetch(`${BACKEND_URL}/save-dataset`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`
+          },
+          body: saveForm,
+        })
+
+        if (saveRes.ok) {
+          setSavedToLibrary(true)
+          // Refresh the saved datasets list
+          if (token) {
+            fetchSavedDatasets(token)
+          }
+        }
+      } catch (saveErr) {
+        // Save failure is non-critical — analysis still works
+        console.error("Failed to save to library:", saveErr)
+      }
+
+      // ── Step 3: Parse local preview ─────────────────────────────
       let columns: string[] = []
       let previewRows: any[] = []
       
@@ -195,7 +243,7 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
         const text = await file.text()
         const parsed = parseCSV(text)
         columns = parsed.columns
-        previewRows = parsed.rows.slice(0, 5000) // Keep up to 5k rows for client-side chart generation
+        previewRows = parsed.rows.slice(0, 5000)
       } else if (ext === ".xlsx" || ext === ".xls") {
         const arrayBuffer = await file.arrayBuffer()
         const workbook = XLSX.read(arrayBuffer, { type: "array" })
@@ -210,7 +258,6 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
           columns = apiSummary.column_info.map((c: any) => c.column_name)
         }
       } else {
-        // Fallback just in case
         columns = apiSummary.column_info.map((c: any) => c.column_name)
       }
       
@@ -225,7 +272,7 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
 
       // Set dataset in context with API summary
       setDataset({
-        fileName: file.name,
+        fileName: datasetName.trim() || file.name,
         fileSize: file.size,
         uploadedAt: new Date(),
         columns,
@@ -242,13 +289,14 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
       )
       setUploadState("error")
     }
-  }, [file, setDataset])
+  }, [file, setDataset, datasetName, token, fetchSavedDatasets])
 
   const removeFile = useCallback(() => {
     setFile(null)
     setUploadState("idle")
     setProgress(0)
     setErrorMsg("")
+    setDatasetName("")
   }, [])
 
   const formatFileSize = (bytes: number) => {
@@ -343,6 +391,22 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
             </div>
           )}
 
+          {/* Dataset Name Input */}
+          {file && uploadState !== "success" && (
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                Dataset Name
+              </label>
+              <input
+                value={datasetName}
+                onChange={(e) => setDatasetName(e.target.value)}
+                placeholder="e.g., Customer Churn Q4"
+                disabled={uploadState === "uploading"}
+                className="h-9 w-full rounded-lg border border-border bg-secondary/50 px-3 text-sm outline-none transition-colors focus:border-ring focus:bg-secondary disabled:opacity-50"
+              />
+            </div>
+          )}
+
           {/* Selected file */}
           {file && uploadState !== "success" && (
             <div className="rounded-xl border border-border bg-secondary/30 p-4">
@@ -381,9 +445,9 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span className="flex items-center gap-1.5">
                       <Loader2 className="h-3 w-3 animate-spin" />
-                      Parsing dataset...
+                      {statusMessage}
                     </span>
-                    <span>{progress}%</span>
+                    <span>{Math.round(progress)}%</span>
                   </div>
                 </div>
               )}
@@ -406,8 +470,8 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
               </div>
               <h3 className="mt-4 text-base font-semibold">Upload Complete!</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                <span className="font-medium text-foreground">{file.name}</span>{" "}
-                has been parsed successfully.
+                <span className="font-medium text-foreground">{datasetName || file.name}</span>{" "}
+                has been analyzed successfully.
               </p>
               <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
                 <span>
@@ -418,6 +482,12 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
                   <span className="font-semibold text-foreground">{colCount}</span> columns
                 </span>
               </div>
+              {savedToLibrary && (
+                <div className="mt-3 flex items-center gap-1.5 text-xs text-chart-3 font-medium">
+                  <Save className="h-3.5 w-3.5" />
+                  Saved to your library
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -453,7 +523,7 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
                 ) : (
                   <>
                     <Upload className="h-4 w-4" />
-                    Upload Dataset
+                    Upload & Analyze
                   </>
                 )}
               </button>
