@@ -16,6 +16,10 @@ const nextConfig = {
         source: '/api/tasks/:task_id',
         destination: `${process.env.FASTAPI_URL || 'https://dataset-api-fastapi.onrender.com'}/tasks/:task_id`,
       },
+      {
+        source: '/api/auth/:path*',
+        destination: `${process.env.AUTH_API_URL || 'http://localhost:8000'}/:path*`,
+      },
     ]
   },
 }

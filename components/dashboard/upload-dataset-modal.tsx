@@ -12,6 +12,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useDataset, parseCSV } from "@/lib/dataset-context"
+import { useAuth } from "@/lib/auth"
 import * as XLSX from "xlsx"
 
 const ACCEPTED_TYPES = [
@@ -31,6 +32,7 @@ interface UploadDatasetModalProps {
 
 export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
   const { setDataset } = useDataset()
+  const { token } = useAuth()
   const [file, setFile] = useState<File | null>(null)
   const [dragOver, setDragOver] = useState(false)
   const [uploadState, setUploadState] = useState<UploadState>("idle")
@@ -143,15 +145,18 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
       // Send to FastAPI backend
       const formData = new FormData()
       formData.append("file", file)
-      formData.append("user_id", "default_user") // Required by backend
       
       // Send to Next.js API proxy to avoid CORS issues
       const res = await fetch("/api/analyze", {
         method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        },
         body: formData,
       })
       
       if (!res.ok) {
+        if (res.status === 401) throw new Error("Unauthorized. Please log in again.");
         throw new Error("Failed to analyze dataset on the server.")
       }
       
@@ -161,7 +166,11 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
       if (initialResponse.task_id) {
         const taskId = initialResponse.task_id;
         while (true) {
-          const pollRes = await fetch(`/api/tasks/${taskId}`);
+          const pollRes = await fetch(`/api/tasks/${taskId}`, {
+            headers: {
+              "Authorization": `Bearer ${token}`
+            }
+          });
           if (!pollRes.ok) throw new Error("Failed to fetch task status.");
           const pollData = await pollRes.json();
           if (pollData.status === "completed") {

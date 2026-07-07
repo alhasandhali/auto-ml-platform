@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react"
+import { useAuth } from "@/lib/auth"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -13,37 +14,59 @@ export default function LoginPage() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
+  const { login } = useAuth()
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setIsLoading(true)
 
-    // Basic validation
     if (!email || !password) {
       setError("Please fill in all fields")
       setIsLoading(false)
       return
     }
 
-    if (!email.includes("@")) {
-      setError("Please enter a valid email")
-      setIsLoading(false)
-      return
-    }
-
-    // Simulate login (in real app, this would call an API)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800))
+      const formData = new URLSearchParams()
+      formData.append("username", email)
+      formData.append("password", password)
 
-      // Store auth token in localStorage
-      localStorage.setItem("authToken", "demo-token-" + Date.now())
-      localStorage.setItem("userEmail", email)
-      localStorage.setItem("userName", email.split("@")[0])
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formData.toString(),
+      })
 
-      // Redirect to dashboard
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData.detail || "Login failed")
+      }
+
+      const data = await response.json()
+      
+      // Fetch user profile using the token
+      const profileRes = await fetch("/api/auth/profile", {
+        headers: { Authorization: `Bearer ${data.access_token}` },
+      })
+      
+      if (!profileRes.ok) {
+        throw new Error("Failed to fetch user profile")
+      }
+      
+      const userProfile = await profileRes.json()
+      
+      // Store auth token in context/localStorage
+      login(data.access_token, {
+        username: userProfile.username,
+        role: userProfile.role,
+        email: userProfile.email,
+      })
+
       router.push("/dashboard")
-    } catch (err) {
-      setError("Login failed. Please try again.")
+    } catch (err: any) {
+      setError(err.message || "Login failed. Please try again.")
+    } finally {
       setIsLoading(false)
     }
   }

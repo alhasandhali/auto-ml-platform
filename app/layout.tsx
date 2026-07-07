@@ -41,6 +41,8 @@ export const viewport: Viewport = {
   ],
 }
 
+import { AuthProvider } from '@/lib/auth'
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -73,8 +75,10 @@ export default function RootLayout({
         suppressHydrationWarning
         className="font-sans antialiased bg-background text-foreground"
       >
-        {children}
-        {process.env.NODE_ENV === 'production' && <Analytics />}
+        <AuthProvider>
+          {children}
+          {process.env.NODE_ENV === 'production' && <Analytics />}
+        </AuthProvider>
       </body>
     </html>
   )

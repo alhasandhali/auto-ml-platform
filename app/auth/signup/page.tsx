@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff, CheckCircle2 } from "lucide-react"
+import { useAuth } from "@/lib/auth"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -17,12 +18,13 @@ export default function SignupPage() {
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
+  const { login } = useAuth()
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setIsLoading(true)
 
-    // Validation
     if (!fullName || !email || !password || !confirmPassword) {
       setError("Please fill in all fields")
       setIsLoading(false)
@@ -53,19 +55,63 @@ export default function SignupPage() {
       return
     }
 
-    // Simulate signup (in real app, this would call an API)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+      const username = fullName.split(" ")[0].toLowerCase() + Date.now().toString().slice(-4);
+      // 1. Register
+      const registerRes = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+          email,
+          password
+        }),
+      })
 
-      // Store auth token in localStorage
-      localStorage.setItem("authToken", "demo-token-" + Date.now())
-      localStorage.setItem("userEmail", email)
-      localStorage.setItem("userName", fullName.split(" ")[0])
+      if (!registerRes.ok) {
+        const errData = await registerRes.json().catch(() => ({}))
+        throw new Error(errData.detail || "Signup failed")
+      }
+      
+      // 2. Automatically login
+      const formData = new URLSearchParams()
+      formData.append("username", username)
+      formData.append("password", password)
 
-      // Redirect to dashboard
+      const loginRes = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: formData.toString(),
+      })
+
+      if (!loginRes.ok) {
+        throw new Error("Account created, but automatic login failed. Please sign in manually.")
+      }
+
+      const loginData = await loginRes.json()
+      
+      // Fetch user profile using the token
+      const profileRes = await fetch("/api/auth/profile", {
+        headers: { Authorization: `Bearer ${loginData.access_token}` },
+      })
+      
+      if (!profileRes.ok) {
+        throw new Error("Failed to fetch user profile")
+      }
+      
+      const userProfile = await profileRes.json()
+      
+      // Store auth token in context/localStorage
+      login(loginData.access_token, {
+        username: userProfile.username,
+        role: userProfile.role,
+        email: userProfile.email,
+      })
+
       router.push("/dashboard")
-    } catch (err) {
-      setError("Signup failed. Please try again.")
+    } catch (err: any) {
+      setError(err.message || "Signup failed. Please try again.")
+    } finally {
       setIsLoading(false)
     }
   }
