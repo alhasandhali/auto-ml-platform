@@ -42,11 +42,11 @@ function ChartCard({
 }
 
 const missingBarsDemo = [
-  { label: "Income", v: 24 },
-  { label: "Salary", v: 12 },
-  { label: "Age", v: 2 },
-  { label: "Date", v: 2 },
-  { label: "Dept", v: 0.5 },
+  { label: "Col 1", v: 0 },
+  { label: "Col 2", v: 0 },
+  { label: "Col 3", v: 0 },
+  { label: "Col 4", v: 0 },
+  { label: "Col 5", v: 0 },
 ]
 
 // Using explicit hex colors because CSS variables in SVG fills can sometimes fail in Recharts
@@ -67,12 +67,12 @@ export function ChartsSection() {
   const [selectedTarget, setSelectedTarget] = useState<string | null>(null)
 
   const numericCols = useMemo(() => {
-    if (!isUploaded || !dataset?.apiSummary) return ["Salary", "Age"]
+    if (!isUploaded || !dataset?.apiSummary) return ["Col 1", "Col 2"]
     return Object.keys(dataset.apiSummary.numeric_summary || {})
   }, [dataset, isUploaded])
 
   const categoricalCols = useMemo(() => {
-    if (!isUploaded || !dataset?.apiSummary) return ["Purchased"]
+    if (!isUploaded || !dataset?.apiSummary) return ["Target"]
     const api = dataset.apiSummary
     const numSet = new Set(Object.keys(api.numeric_summary || {}))
     return api.column_info?.map(c => c.column_name).filter(c => !numSet.has(c)) || []
@@ -87,8 +87,8 @@ export function ChartsSection() {
     }
   }, [isUploaded, numericCols, categoricalCols, dataset])
 
-  const featureCol = selectedFeature || "Salary"
-  const targetCol = selectedTarget || "Purchased"
+  const featureCol = selectedFeature || "Col 1"
+  const targetCol = selectedTarget || "Target"
 
   // Compute Missing
   const missingBars = useMemo(() => {
@@ -110,14 +110,14 @@ export function ChartsSection() {
     }
     if (!isUploaded || !dataset || dataset.rows.length === 0) {
       // Demo
-      return [8, 18, 34, 52, 68, 74, 61, 45, 30, 19, 11, 6].map((v, i) => ({
-        binStart: i * 10, binEnd: (i+1) * 10, count: v
+      return [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].map((v, i) => ({
+        binStart: i * 10, binEnd: (i + 1) * 10, count: v
       }))
     }
     const values = dataset.rows
       .map(r => r[featureCol])
       .filter((v): v is number => typeof v === "number")
-    
+
     return computeHistogram(values, 12)
   }, [dataset, isUploaded, featureCol])
   const maxHist = Math.max(...histogram.map(h => h.count), 1)
@@ -134,15 +134,15 @@ export function ChartsSection() {
     if (!isUploaded || !dataset || dataset.rows.length === 0) {
       return {
         corrMatrix: [
-          [1, 0.42, 0.68, 0.31],
-          [0.42, 1, 0.87, 0.55],
-          [0.68, 0.87, 1, 0.49],
-          [0.31, 0.55, 0.49, 1],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
+          [0, 0, 0, 0],
         ],
-        corrCols: ["Age", "Sal", "Inc", "Prc"]
+        corrCols: ["Col", "Col", "Col", "Col"]
       }
     }
-    
+
     // Pick up to 5 numeric columns to keep UI clean
     const cols = numericCols.slice(0, 5)
     return {
@@ -158,13 +158,13 @@ export function ChartsSection() {
     }
     if (!isUploaded || !dataset || dataset.rows.length === 0) {
       return [
-        { name: "Yes", count: 6739, pct: 54 },
-        { name: "No", count: 5741, pct: 46 }
+        { name: "Class A", count: 0, pct: 50 },
+        { name: "Class B", count: 0, pct: 50 }
       ]
     }
     const values = dataset.rows.map(r => r[targetCol])
     const freqs = computeFrequencies(values).slice(0, 5) // Top 5
-    
+
     // Normalize pct
     const totalCount = freqs.reduce((a, b) => a + b.count, 0)
     return freqs.map(f => ({ ...f, pct: Math.round((f.count / totalCount) * 100) }))
@@ -180,13 +180,13 @@ export function ChartsSection() {
       >
         <div className="flex h-full items-end justify-around gap-3 border-b border-border pb-0 relative">
           {missingBars.length === 0 && (
-             <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground pb-6">
-               No missing values
-             </div>
+            <div className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground pb-6">
+              No missing values
+            </div>
           )}
           {missingBars.map((b) => (
             <div key={b.label} className="group flex flex-1 flex-col items-center gap-2 h-full justify-end relative cursor-default">
-              
+
               {/* Tooltip */}
               <div className="absolute bottom-[calc(100%-20px)] hidden group-hover:flex flex-col items-center z-10 pointer-events-none w-max">
                 <div className="bg-popover text-popover-foreground border border-border shadow-md text-xs px-2 py-1.5 rounded-md font-medium">
@@ -243,7 +243,7 @@ export function ChartsSection() {
                 {/* Tooltip */}
                 <div className="absolute bottom-full mb-1.5 hidden group-hover:flex flex-col items-center left-1/2 -translate-x-1/2 z-10 pointer-events-none w-max">
                   <div className="bg-popover text-popover-foreground border border-border shadow-md text-[11px] px-2 py-1 rounded-md font-medium text-center">
-                    <div>{h.binStart.toLocaleString(undefined, {maximumFractionDigits: 1})} - {h.binEnd.toLocaleString(undefined, {maximumFractionDigits: 1})}</div>
+                    <div>{h.binStart.toLocaleString(undefined, { maximumFractionDigits: 1 })} - {h.binEnd.toLocaleString(undefined, { maximumFractionDigits: 1 })}</div>
                     <div className="text-muted-foreground">{h.count.toLocaleString()} rows</div>
                   </div>
                   <div className="w-1.5 h-1.5 bg-popover border-b border-r border-border rotate-45 -mt-[4px]" />
@@ -253,9 +253,9 @@ export function ChartsSection() {
           </div>
           {histogram.length > 0 && (
             <div className="mt-2 flex justify-between text-[10px] text-muted-foreground pb-2 px-1">
-              <span>{histogram[0].binStart.toLocaleString(undefined, {maximumFractionDigits: 1})}</span>
-              <span>{histogram[Math.floor(histogram.length/2)].binStart.toLocaleString(undefined, {maximumFractionDigits: 1})}</span>
-              <span>{histogram[histogram.length-1].binEnd.toLocaleString(undefined, {maximumFractionDigits: 1})}</span>
+              <span>{histogram[0].binStart.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+              <span>{histogram[Math.floor(histogram.length / 2)].binStart.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
+              <span>{histogram[histogram.length - 1].binEnd.toLocaleString(undefined, { maximumFractionDigits: 1 })}</span>
             </div>
           )}
         </div>
@@ -305,7 +305,7 @@ export function ChartsSection() {
                         {/* Tooltip */}
                         <div className="absolute bottom-full mb-1 hidden group-hover:flex flex-col items-center z-10 pointer-events-none w-max">
                           <div className="bg-popover text-popover-foreground border border-border shadow-md text-[11px] px-2 py-1 rounded-md font-medium text-center leading-tight">
-                            {corrCols[r]} × {corrCols[c]}<br/>
+                            {corrCols[r]} × {corrCols[c]}<br />
                             <span className="text-muted-foreground">Corr: {val.toFixed(3)}</span>
                           </div>
                           <div className="w-1.5 h-1.5 bg-popover border-b border-r border-border rotate-45 -mt-[4px]" />
@@ -372,7 +372,7 @@ export function ChartsSection() {
                     ))}
                   </Pie>
                   {/* Custom Tooltip */}
-                  <Tooltip 
+                  <Tooltip
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         const data = payload[0].payload;
@@ -395,9 +395,9 @@ export function ChartsSection() {
                 </RechartsPieChart>
               </ResponsiveContainer>
             ) : (
-               <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                 No data available
-               </div>
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                No data available
+              </div>
             )}
           </div>
           <div className="flex-1 space-y-2.5 overflow-y-auto pr-1">
