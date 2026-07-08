@@ -1,8 +1,9 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { CopyCheck, TriangleAlert, CheckCircle2 } from "lucide-react"
-import { useDataset } from "@/lib/dataset-context"
+import { useDataset, BACKEND_URL } from "@/lib/dataset-context"
+import { useAuth } from "@/lib/auth"
 
 export function DuplicateAnalysis() {
   const { dataset, isUploaded } = useDataset()
@@ -21,6 +22,59 @@ export function DuplicateAnalysis() {
   }, [dataset, isUploaded])
 
   const hasDuplicates = dupCount > 0
+  const [isCleaning, setIsCleaning] = useState(false)
+  const { token } = useAuth()
+  const { fetchSavedDatasets, loadSavedAnalysis } = useDataset()
+
+  const handleRemoveDuplicates = async () => {
+    if (!dataset?.id || !token) return
+    
+    setIsCleaning(true)
+    try {
+      // 1. Trigger the cleaning endpoint
+      const res = await fetch(`${BACKEND_URL}/datasets/${dataset.id}/clean-duplicates`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      
+      if (!res.ok) {
+        throw new Error("Failed to clean duplicates")
+      }
+      
+      const data = await res.json()
+      const newDatasetId = data.dataset_id
+      const taskId = data.task_id
+      
+      // 2. Poll for the analysis to complete
+      if (taskId) {
+        while (true) {
+          const pollRes = await fetch(`${BACKEND_URL}/tasks/${taskId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          if (!pollRes.ok) throw new Error("Failed to fetch task status.");
+          const pollData = await pollRes.json();
+          if (pollData.status === "completed") {
+            break;
+          } else if (pollData.status === "failed") {
+            throw new Error(pollData.error || "Analysis failed.");
+          }
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+      }
+      
+      // 3. Re-fetch library list to show new dataset
+      await fetchSavedDatasets(token)
+      
+      // 4. Load the newly cleaned dataset into the dashboard seamlessly
+      await loadSavedAnalysis(taskId, newDatasetId, token)
+      
+    } catch (err) {
+      console.error("Error removing duplicates:", err)
+      // Ideally show a toast notification here
+    } finally {
+      setIsCleaning(false)
+    }
+  }
 
   return (
     <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
@@ -62,8 +116,12 @@ export function DuplicateAnalysis() {
       </p>
 
       {hasDuplicates && (
-        <button className="mt-4 inline-flex h-9 w-full items-center justify-center rounded-lg border border-border text-sm font-medium transition-colors hover:bg-accent">
-          Remove Duplicates
+        <button 
+          onClick={handleRemoveDuplicates}
+          disabled={isCleaning}
+          className="mt-4 inline-flex h-9 w-full items-center justify-center rounded-lg border border-border text-sm font-medium transition-colors hover:bg-accent disabled:opacity-50"
+        >
+          {isCleaning ? "Cleaning..." : "Remove Duplicates"}
         </button>
       )}
     </section>

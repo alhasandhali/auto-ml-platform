@@ -25,6 +25,7 @@ export interface ApiSummary {
 }
 
 export interface DatasetInfo {
+  id?: string
   fileName: string
   fileSize: number
   uploadedAt: Date
@@ -213,6 +214,7 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
       }
 
       setDatasetState({
+        id: datasetId,
         fileName: doc.filename || "Saved Dataset",
         fileSize: 0,
         uploadedAt: new Date(doc.created_at || Date.now()),

@@ -158,6 +158,7 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
       }, 300)
 
       // ── Step 1: Analyze ──────────────────────────────────────────
+      let datasetId = undefined;
       const analyzeForm = new FormData()
       analyzeForm.append("file", file)
       
@@ -223,6 +224,8 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
         })
 
         if (saveRes.ok) {
+          const saveResData = await saveRes.json();
+          datasetId = saveResData.id;
           setSavedToLibrary(true)
           // Refresh the saved datasets list
           if (token) {
@@ -272,6 +275,7 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
 
       // Set dataset in context with API summary
       setDataset({
+        id: datasetId,
         fileName: datasetName.trim() || file.name,
         fileSize: file.size,
         uploadedAt: new Date(),
