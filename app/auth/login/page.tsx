@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react"
 import { useAuth } from "@/lib/auth"
 
@@ -15,6 +15,11 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
 
   const { login } = useAuth()
+
+  useEffect(() => {
+    // Ping the backend to wake up the server from a cold start on Render
+    fetch("/api/auth/profile").catch(() => {})
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
