@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Bell, Lock, Users, Palette, Database as DatabaseIcon, Shield, Loader2 } from "lucide-react"
 import { useAuth } from "@/lib/auth"
 import { useState, useEffect } from "react"
-import { useTheme } from "next-themes"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -26,18 +25,52 @@ import {
 
 export default function SettingsPage() {
   const { user, token, logout, login } = useAuth()
-  const { theme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
+  const [theme, setThemeState] = useState<string>("system")
 
   // Wait until mounted to show theme UI to avoid hydration mismatch
   useEffect(() => {
     setMounted(true)
+    const saved = localStorage.getItem("theme")
+    if (saved) {
+      setThemeState(saved)
+    }
   }, [])
+
+  const setTheme = (newTheme: string) => {
+    setThemeState(newTheme)
+    if (newTheme === 'system') {
+      localStorage.removeItem("theme")
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches
+      if (prefersDark) {
+        document.documentElement.classList.add("dark")
+      } else {
+        document.documentElement.classList.remove("dark")
+      }
+    } else {
+      localStorage.setItem("theme", newTheme)
+      if (newTheme === 'dark') {
+        document.documentElement.classList.add("dark")
+      } else {
+        document.documentElement.classList.remove("dark")
+      }
+    }
+    window.dispatchEvent(
+      new CustomEvent("themechange", { detail: { isDark: newTheme === 'dark' || (newTheme === 'system' && window.matchMedia("(prefers-color-scheme: dark)").matches) } })
+    )
+  }
 
   // Form states
   const [profileLoading, setProfileLoading] = useState(false)
-  const [fullName, setFullName] = useState(user?.full_name || user?.username || "")
-  const [email, setEmail] = useState(user?.email || "")
+  const [fullName, setFullName] = useState("")
+  const [email, setEmail] = useState("")
+
+  useEffect(() => {
+    if (user) {
+      setFullName(user.full_name || user.username || "")
+      setEmail(user.email || "")
+    }
+  }, [user])
 
   const [securityLoading, setSecurityLoading] = useState(false)
   const [currentPassword, setCurrentPassword] = useState("")
