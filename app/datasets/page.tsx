@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { DatasetProvider, useDataset, type SavedDataset } from "@/lib/dataset-context"
+import { DatasetProvider, useDataset, BACKEND_URL, type SavedDataset } from "@/lib/dataset-context"
 import { useAuth } from "@/lib/auth"
 import { MainLayout } from "@/components/dashboard/main-layout"
 import { DatasetLibrary } from "@/components/dashboard/dataset-library"
@@ -37,8 +37,18 @@ function DatasetsContent() {
     if (token) {
       setIsLoadingAnalysis(true)
       try {
-        // Fetch analyses to find one matching this dataset's filename
-        const res = await fetch(`https://dataset-api-fastapi.onrender.com/analyses?limit=100`, {
+        // If dataset has an associated analysis_id, use it directly
+        if (ds.analysis_id) {
+          const success = await loadSavedAnalysis(ds.analysis_id, ds._id, token)
+          if (success) {
+            setView("analysis")
+            setIsLoadingAnalysis(false)
+            return
+          }
+        }
+
+        // Fallback: Fetch analyses to find one matching this dataset's filename
+        const res = await fetch(`${BACKEND_URL}/analyses?limit=100`, {
           headers: { Authorization: `Bearer ${token}` },
         })
         if (res.ok) {
@@ -47,7 +57,7 @@ function DatasetsContent() {
             (a: any) => a.filename === ds.metadata.name || a.filename === ds.metadata.name + "." + ds.metadata.file_type
           )
           if (match && match.status === "completed") {
-            const success = await loadSavedAnalysis(match._id, token)
+            const success = await loadSavedAnalysis(match._id, ds._id, token)
             if (success) {
               setView("analysis")
               setIsLoadingAnalysis(false)

@@ -49,6 +49,7 @@ export interface SavedDataset {
     uploaded_at: string
   }
   s3_key: string
+  analysis_id?: string
 }
 
 interface DatasetContextValue {
@@ -62,7 +63,7 @@ interface DatasetContextValue {
   isLoadingList: boolean
   fetchSavedDatasets: (token: string) => Promise<void>
   deleteSavedDataset: (id: string, token: string) => Promise<boolean>
-  loadSavedAnalysis: (analysisId: string, token: string) => Promise<boolean>
+  loadSavedAnalysis: (analysisId: string, datasetId: string, token: string) => Promise<boolean>
 }
 
 const DatasetContext = createContext<DatasetContextValue | null>(null)
@@ -130,7 +131,7 @@ export function parseCSV(text: string): { columns: string[]; rows: ParsedRow[] }
 }
 
 // ── Backend URL ────────────────────────────────────────────────────────────────
-const BACKEND_URL = "https://dataset-api-fastapi.onrender.com"
+export const BACKEND_URL = "https://dataset-api-fastapi.onrender.com"
 
 // ── Provider ───────────────────────────────────────────────────────────────────
 export function DatasetProvider({ children }: { children: ReactNode }) {
@@ -183,7 +184,7 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // Load a saved analysis into the context
-  const loadSavedAnalysis = useCallback(async (analysisId: string, token: string): Promise<boolean> => {
+  const loadSavedAnalysis = useCallback(async (analysisId: string, datasetId: string, token: string): Promise<boolean> => {
     try {
       const res = await fetch(`${BACKEND_URL}/analyses/${analysisId}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -196,12 +197,27 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
       const analysis = doc.analysis
       const columns = (analysis.column_info || []).map((c: any) => c.column_name)
 
+      let previewRows = []
+      try {
+        const previewRes = await fetch(`${BACKEND_URL}/datasets/${datasetId}/preview`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (previewRes.ok) {
+          const previewData = await previewRes.json()
+          if (previewData.rows) {
+            previewRows = previewData.rows
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load dataset preview:", err)
+      }
+
       setDatasetState({
         fileName: doc.filename || "Saved Dataset",
         fileSize: 0,
         uploadedAt: new Date(doc.created_at || Date.now()),
         columns,
-        rows: [], // No raw rows from saved analysis
+        rows: previewRows,
         totalRows: analysis.rows || 0,
         totalColumns: analysis.columns || 0,
         apiSummary: analysis,
