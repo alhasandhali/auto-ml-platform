@@ -38,7 +38,12 @@ export function DuplicateAnalysis() {
       })
       
       if (!res.ok) {
-        throw new Error("Failed to clean duplicates")
+        let errorMsg = "Failed to clean duplicates"
+        try {
+          const errData = await res.json()
+          if (errData.detail) errorMsg = errData.detail
+        } catch (_) {}
+        throw new Error(errorMsg)
       }
       
       const data = await res.json()
@@ -70,7 +75,7 @@ export function DuplicateAnalysis() {
       
     } catch (err) {
       console.error("Error removing duplicates:", err)
-      // Ideally show a toast notification here
+      alert(err instanceof Error ? err.message : "Error removing duplicates")
     } finally {
       setIsCleaning(false)
     }
