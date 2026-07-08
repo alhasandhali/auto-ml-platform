@@ -3,10 +3,11 @@
 import React, { createContext, useContext, useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
 
-type User = {
+export interface User {
   username: string
   role: string
   email?: string
+  full_name?: string
 }
 
 type AuthContextType = {
