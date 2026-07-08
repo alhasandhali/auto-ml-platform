@@ -213,11 +213,14 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
         console.error("Failed to load dataset preview:", err)
       }
 
+      const createdAtStr = doc.created_at || new Date().toISOString();
+      const safeCreatedAt = createdAtStr.endsWith('Z') || createdAtStr.includes('+') ? createdAtStr : `${createdAtStr}Z`;
+
       setDatasetState({
         id: datasetId,
         fileName: doc.filename || "Saved Dataset",
         fileSize: 0,
-        uploadedAt: new Date(doc.created_at || Date.now()),
+        uploadedAt: new Date(safeCreatedAt),
         columns,
         rows: previewRows,
         totalRows: analysis.rows || 0,

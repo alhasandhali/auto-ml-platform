@@ -27,7 +27,8 @@ type SortOption = "newest" | "oldest" | "name-asc" | "name-desc" | "size"
 
 function formatDate(dateStr: string) {
   try {
-    const d = new Date(dateStr)
+    const safeDateStr = dateStr.endsWith('Z') || dateStr.includes('+') ? dateStr : `${dateStr}Z`;
+    const d = new Date(safeDateStr)
     return d.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
@@ -40,7 +41,8 @@ function formatDate(dateStr: string) {
 
 function formatRelativeTime(dateStr: string) {
   try {
-    const d = new Date(dateStr)
+    const safeDateStr = dateStr.endsWith('Z') || dateStr.includes('+') ? dateStr : `${dateStr}Z`;
+    const d = new Date(safeDateStr)
     const now = new Date()
     const diffMs = now.getTime() - d.getTime()
     const diffMins = Math.floor(diffMs / 60000)
