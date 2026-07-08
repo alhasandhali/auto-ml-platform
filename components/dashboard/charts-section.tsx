@@ -105,6 +105,9 @@ export function ChartsSection() {
 
   // Compute Histogram
   const histogram = useMemo(() => {
+    if (isUploaded && dataset?.apiSummary?.histograms && dataset.apiSummary.histograms[featureCol]) {
+      return dataset.apiSummary.histograms[featureCol]
+    }
     if (!isUploaded || !dataset || dataset.rows.length === 0) {
       // Demo
       return [8, 18, 34, 52, 68, 74, 61, 45, 30, 19, 11, 6].map((v, i) => ({
@@ -121,6 +124,12 @@ export function ChartsSection() {
 
   // Compute Correlation Matrix
   const { corrMatrix, corrCols } = useMemo(() => {
+    if (isUploaded && dataset?.apiSummary?.correlation?.cols?.length > 0) {
+      return {
+        corrMatrix: dataset.apiSummary.correlation.matrix,
+        corrCols: dataset.apiSummary.correlation.cols
+      }
+    }
     if (!isUploaded || !dataset || dataset.rows.length === 0) {
       return {
         corrMatrix: [
@@ -143,6 +152,9 @@ export function ChartsSection() {
 
   // Compute Class Distribution
   const classFreq = useMemo(() => {
+    if (isUploaded && dataset?.apiSummary?.frequencies && dataset.apiSummary.frequencies[targetCol]) {
+      return dataset.apiSummary.frequencies[targetCol]
+    }
     if (!isUploaded || !dataset || dataset.rows.length === 0) {
       return [
         { name: "Yes", count: 6739, pct: 54 },
