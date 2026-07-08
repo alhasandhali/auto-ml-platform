@@ -124,10 +124,11 @@ export function ChartsSection() {
 
   // Compute Correlation Matrix
   const { corrMatrix, corrCols } = useMemo(() => {
-    if (isUploaded && dataset?.apiSummary?.correlation?.cols?.length > 0) {
+    const correlation = dataset?.apiSummary?.correlation;
+    if (isUploaded && correlation && correlation.cols && correlation.cols.length > 0) {
       return {
-        corrMatrix: dataset.apiSummary.correlation.matrix,
-        corrCols: dataset.apiSummary.correlation.cols
+        corrMatrix: correlation.matrix,
+        corrCols: correlation.cols
       }
     }
     if (!isUploaded || !dataset || dataset.rows.length === 0) {
@@ -233,7 +234,7 @@ export function ChartsSection() {
       >
         <div className="flex flex-col h-full">
           <div className="flex-1 flex items-end gap-1 border-b border-border">
-            {histogram.map((h, i) => (
+            {histogram.map((h: any, i: number) => (
               <div
                 key={i}
                 className="flex-1 rounded-t bg-chart-2/80 transition-all hover:bg-chart-2 relative group cursor-default"

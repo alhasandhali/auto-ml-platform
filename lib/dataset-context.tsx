@@ -22,12 +22,12 @@ export interface ApiSummary {
   numeric_summary: Record<string, any>;
   categorical_summary: Record<string, any>;
   outliers: Record<string, number>;
-  histograms?: Record<string, any>;
+  histograms?: Record<string, { binStart: number; binEnd: number; count: number }[]>;
   correlation?: {
     cols: string[];
     matrix: number[][];
   };
-  frequencies?: Record<string, any>;
+  frequencies?: Record<string, { name: string; count: number; pct: number }[]>;
 }
 
 export interface DatasetInfo {
