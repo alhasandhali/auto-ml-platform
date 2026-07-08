@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils"
 import { useDataset, parseCSV } from "@/lib/dataset-context"
 import { useAuth } from "@/lib/auth"
+import { apiFetch } from "@/lib/api"
 import * as XLSX from "xlsx"
 
 const ACCEPTED_TYPES = [
@@ -162,11 +163,8 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
       const analyzeForm = new FormData()
       analyzeForm.append("file", file)
       
-      const res = await fetch(`${BACKEND_URL}/analyze`, {
+      const res = await apiFetch(`${BACKEND_URL}/analyze`, {
         method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`
-        },
         body: analyzeForm,
       })
       
@@ -183,11 +181,7 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
       if (taskId) {
         setStatusMessage("Processing analysis...")
         while (true) {
-          const pollRes = await fetch(`${BACKEND_URL}/tasks/${taskId}`, {
-            headers: {
-              "Authorization": `Bearer ${token}`
-            }
-          });
+          const pollRes = await apiFetch(`${BACKEND_URL}/tasks/${taskId}`);
           if (!pollRes.ok) throw new Error("Failed to fetch task status.");
           const pollData = await pollRes.json();
           if (pollData.status === "completed") {
@@ -215,11 +209,8 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
         if (taskId) saveForm.append("analysis_id", taskId)
         if (s3Key) saveForm.append("s3_key", s3Key)
 
-        const saveRes = await fetch(`${BACKEND_URL}/save-dataset`, {
+        const saveRes = await apiFetch(`${BACKEND_URL}/save-dataset`, {
           method: "POST",
-          headers: {
-            "Authorization": `Bearer ${token}`
-          },
           body: saveForm,
         })
 
@@ -228,9 +219,7 @@ export function UploadDatasetModal({ open, onClose }: UploadDatasetModalProps) {
           datasetId = saveResData.id;
           setSavedToLibrary(true)
           // Refresh the saved datasets list
-          if (token) {
-            fetchSavedDatasets(token)
-          }
+          fetchSavedDatasets()
         }
       } catch (saveErr) {
         // Save failure is non-critical — analysis still works

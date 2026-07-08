@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff, CheckCircle2 } from "lucide-react"
 import { useAuth } from "@/lib/auth"
+import { apiFetch } from "@/lib/api"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -70,7 +71,7 @@ export default function SignupPage() {
     try {
       const username = fullName.split(" ")[0].toLowerCase() + Date.now().toString().slice(-4);
       // 1. Register
-      const registerRes = await fetch("/api/auth/register", {
+      const registerRes = await apiFetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

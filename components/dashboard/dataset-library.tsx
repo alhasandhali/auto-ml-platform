@@ -242,7 +242,7 @@ export function DatasetLibrary({
   // Fetch datasets on mount
   useEffect(() => {
     if (token) {
-      fetchSavedDatasets(token)
+      fetchSavedDatasets()
     }
   }, [token, fetchSavedDatasets])
 
@@ -295,7 +295,7 @@ export function DatasetLibrary({
   const handleDelete = async () => {
     if (!deleteTarget || !token) return
     setIsDeleting(true)
-    const success = await deleteSavedDataset(deleteTarget._id, token)
+    const success = await deleteSavedDataset(deleteTarget._id)
     setIsDeleting(false)
     if (success) {
       setDeleteTarget(null)

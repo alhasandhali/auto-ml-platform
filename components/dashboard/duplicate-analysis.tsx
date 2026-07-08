@@ -5,6 +5,7 @@ import { CopyCheck, TriangleAlert, CheckCircle2 } from "lucide-react"
 import { useDataset, BACKEND_URL } from "@/lib/dataset-context"
 import { useAuth } from "@/lib/auth"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/api"
 
 export function DuplicateAnalysis() {
   const { dataset, isUploaded } = useDataset()
@@ -33,9 +34,8 @@ export function DuplicateAnalysis() {
     setIsCleaning(true)
     try {
       // 1. Trigger the cleaning endpoint
-      const res = await fetch(`${BACKEND_URL}/datasets/${dataset.id}/clean-duplicates`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` }
+      const res = await apiFetch(`${BACKEND_URL}/datasets/${dataset.id}/clean-duplicates`, {
+        method: "POST"
       })
       
       if (!res.ok) {
@@ -54,9 +54,7 @@ export function DuplicateAnalysis() {
       // 2. Poll for the analysis to complete
       if (taskId) {
         while (true) {
-          const pollRes = await fetch(`${BACKEND_URL}/tasks/${taskId}`, {
-            headers: { Authorization: `Bearer ${token}` }
-          });
+          const pollRes = await apiFetch(`${BACKEND_URL}/tasks/${taskId}`);
           if (!pollRes.ok) throw new Error("Failed to fetch task status.");
           const pollData = await pollRes.json();
           if (pollData.status === "completed") {
@@ -69,10 +67,10 @@ export function DuplicateAnalysis() {
       }
       
       // 3. Re-fetch library list to show new dataset
-      await fetchSavedDatasets(token)
+      await fetchSavedDatasets()
       
       // 4. Load the newly cleaned dataset into the dashboard seamlessly
-      await loadSavedAnalysis(taskId, newDatasetId, token)
+      await loadSavedAnalysis(taskId, newDatasetId)
       
     } catch (err) {
       console.error("Error removing duplicates:", err)

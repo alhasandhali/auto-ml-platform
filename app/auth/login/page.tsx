@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react"
 import { useAuth } from "@/lib/auth"
+import { apiFetch } from "@/lib/api"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -37,7 +38,7 @@ export default function LoginPage() {
       formData.append("username", email)
       formData.append("password", password)
 
-      const response = await fetch("/api/auth/login", {
+      const response = await apiFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: formData.toString(),
@@ -51,7 +52,7 @@ export default function LoginPage() {
       const data = await response.json()
       
       // Fetch user profile using the token
-      const profileRes = await fetch("/api/auth/profile", {
+      const profileRes = await apiFetch("/api/auth/profile", {
         headers: { Authorization: `Bearer ${data.access_token}` },
       })
       

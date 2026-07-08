@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useAuth } from "@/lib/auth"
 import { User, Mail, Shield, Save, Loader2, LogOut } from "lucide-react"
+import { apiFetch } from "@/lib/api"
 
 export default function ProfilePage() {
   const { user, token, logout, login } = useAuth()
@@ -22,11 +23,10 @@ export default function ProfilePage() {
     setMessage({ type: "", text: "" })
 
     try {
-      const res = await fetch("/api/auth/profile", {
+      const res = await apiFetch("/api/auth/profile", {
         method: "PUT",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({ email })
       })

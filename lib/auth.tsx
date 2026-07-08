@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react"
 import { useRouter, usePathname } from "next/navigation"
+import { apiFetch, setGlobalAccessToken, getGlobalAccessToken } from "./api"
 
 export interface User {
   username: string
@@ -27,32 +28,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
+  // Initialize session on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem("authToken")
-    const storedUser = localStorage.getItem("authUser")
-    if (storedToken && storedUser) {
-      setToken(storedToken)
+    const initializeAuth = async () => {
       try {
-        setUser(JSON.parse(storedUser))
-      } catch (e) {
-        // Invalid json
+        // Trigger a profile fetch to hydrate the user state.
+        // apiFetch will seamlessly attempt to refresh the token if we have a valid HttpOnly cookie.
+        const response = await apiFetch("/api/auth/profile")
+        if (response.ok) {
+          const userData = await response.json()
+          setUser(userData)
+          setToken(getGlobalAccessToken())
+        } else {
+          setToken(null)
+          setUser(null)
+        }
+      } catch (err) {
+        setToken(null)
+        setUser(null)
+      } finally {
+        setIsLoading(false)
       }
     }
-    setIsLoading(false)
-  }, [])
+    initializeAuth()
+
+    // Listen for forced logouts from apiFetch interceptor
+    const handleLogoutEvent = () => {
+      setToken(null)
+      setUser(null)
+      router.push("/auth/login")
+    }
+    window.addEventListener("auth:logout", handleLogoutEvent)
+    return () => window.removeEventListener("auth:logout", handleLogoutEvent)
+  }, [router])
 
   const login = (newToken: string, newUser: User) => {
-    localStorage.setItem("authToken", newToken)
-    localStorage.setItem("authUser", JSON.stringify(newUser))
+    setGlobalAccessToken(newToken)
     setToken(newToken)
     setUser(newUser)
   }
 
-  const logout = () => {
-    localStorage.removeItem("authToken")
-    localStorage.removeItem("authUser")
+  const logout = async () => {
+    setIsLoading(true)
+    try {
+      await apiFetch("/api/auth/logout", { method: "POST" })
+    } catch (e) {}
+    setGlobalAccessToken(null)
     setToken(null)
     setUser(null)
+    setIsLoading(false)
     router.push("/auth/login")
   }
 
@@ -61,10 +85,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!isLoading) {
       const isAuthPage = pathname.startsWith("/auth/")
       if (!token && !isAuthPage && pathname !== "/") {
-        // Redirect to login if accessing protected route without token
         router.push("/auth/login")
       } else if (token && isAuthPage) {
-        // Redirect to dashboard if accessing auth pages with token
         router.push("/dashboard")
       }
     }

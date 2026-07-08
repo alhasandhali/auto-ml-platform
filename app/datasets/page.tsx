@@ -39,7 +39,7 @@ function DatasetsContent() {
       try {
         // If dataset has an associated analysis_id, use it directly
         if (ds.analysis_id) {
-          const success = await loadSavedAnalysis(ds.analysis_id, ds._id, token)
+          const success = await loadSavedAnalysis(ds.analysis_id, ds._id)
           if (success) {
             setView("analysis")
             setIsLoadingAnalysis(false)
@@ -57,7 +57,7 @@ function DatasetsContent() {
             (a: any) => a.filename === ds.metadata.name || a.filename === ds.metadata.name + "." + ds.metadata.file_type
           )
           if (match && match.status === "completed") {
-            const success = await loadSavedAnalysis(match._id, ds._id, token)
+            const success = await loadSavedAnalysis(match._id, ds._id)
             if (success) {
               setView("analysis")
               setIsLoadingAnalysis(false)

@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Bell, Lock, Users, Palette, Database as DatabaseIcon, Shield, Loader2 } from "lucide-react"
 import { useAuth } from "@/lib/auth"
+import { apiFetch } from "@/lib/api"
 import { useState, useEffect } from "react"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
@@ -95,11 +96,10 @@ export default function SettingsPage() {
   const handleProfileUpdate = async () => {
     setProfileLoading(true)
     try {
-      const response = await fetch("/api/auth/profile", {
+      const response = await apiFetch("/api/auth/profile", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({ email, full_name: fullName })
       })
@@ -129,11 +129,10 @@ export default function SettingsPage() {
     }
     setSecurityLoading(true)
     try {
-      const response = await fetch("/api/auth/profile/password", {
+      const response = await apiFetch("/api/auth/profile/password", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
         },
         body: JSON.stringify({ current_password: currentPassword, new_password: newPassword })
       })
@@ -156,11 +155,8 @@ export default function SettingsPage() {
 
   const handleDeleteAccount = async () => {
     try {
-      const response = await fetch("/api/auth/profile", {
+      const response = await apiFetch("/api/auth/profile", {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
       })
       if (!response.ok) throw new Error("Failed to delete account")
       

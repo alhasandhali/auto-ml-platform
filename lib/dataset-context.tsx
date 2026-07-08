@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
+import { apiFetch } from "./api"
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 export type ParsedRow = Record<string, string | number | boolean | null>
@@ -68,9 +69,9 @@ interface DatasetContextValue {
   // Saved datasets library
   savedDatasets: SavedDataset[]
   isLoadingList: boolean
-  fetchSavedDatasets: (token: string) => Promise<void>
-  deleteSavedDataset: (id: string, token: string) => Promise<boolean>
-  loadSavedAnalysis: (analysisId: string, datasetId: string, token: string) => Promise<boolean>
+  fetchSavedDatasets: () => Promise<void>
+  deleteSavedDataset: (id: string) => Promise<boolean>
+  loadSavedAnalysis: (analysisId: string, datasetId: string) => Promise<boolean>
 }
 
 const DatasetContext = createContext<DatasetContextValue | null>(null)
@@ -157,12 +158,10 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // Fetch saved datasets from backend
-  const fetchSavedDatasets = useCallback(async (token: string) => {
+  const fetchSavedDatasets = useCallback(async () => {
     setIsLoadingList(true)
     try {
-      const res = await fetch(`${BACKEND_URL}/datasets?limit=100`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await apiFetch(`${BACKEND_URL}/datasets?limit=100`)
       if (!res.ok) throw new Error("Failed to fetch datasets")
       const data = await res.json()
       setSavedDatasets(data.datasets || [])
@@ -174,11 +173,10 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // Delete a saved dataset
-  const deleteSavedDataset = useCallback(async (id: string, token: string): Promise<boolean> => {
+  const deleteSavedDataset = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const res = await fetch(`${BACKEND_URL}/datasets/${id}`, {
+      const res = await apiFetch(`${BACKEND_URL}/datasets/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error("Failed to delete dataset")
       // Remove from local state
@@ -191,11 +189,9 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // Load a saved analysis into the context
-  const loadSavedAnalysis = useCallback(async (analysisId: string, datasetId: string, token: string): Promise<boolean> => {
+  const loadSavedAnalysis = useCallback(async (analysisId: string, datasetId: string): Promise<boolean> => {
     try {
-      const res = await fetch(`${BACKEND_URL}/analyses/${analysisId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+      const res = await apiFetch(`${BACKEND_URL}/analyses/${analysisId}`)
       if (!res.ok) throw new Error("Failed to load analysis")
       const doc = await res.json()
       
@@ -206,9 +202,7 @@ export function DatasetProvider({ children }: { children: ReactNode }) {
 
       let previewRows = []
       try {
-        const previewRes = await fetch(`${BACKEND_URL}/datasets/${datasetId}/preview`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        const previewRes = await apiFetch(`${BACKEND_URL}/datasets/${datasetId}/preview`)
         if (previewRes.ok) {
           const previewData = await previewRes.json()
           if (previewData.rows) {
