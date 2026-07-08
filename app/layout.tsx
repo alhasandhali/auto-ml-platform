@@ -42,6 +42,7 @@ export const viewport: Viewport = {
 }
 
 import { AuthProvider } from '@/lib/auth'
+import { Toaster } from "@/components/ui/sonner"
 
 export default function RootLayout({
   children,
@@ -79,6 +80,7 @@ export default function RootLayout({
           {children}
           {process.env.NODE_ENV === 'production' && <Analytics />}
         </AuthProvider>
+        <Toaster />
       </body>
     </html>
   )

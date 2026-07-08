@@ -4,6 +4,7 @@ import { useMemo, useState } from "react"
 import { CopyCheck, TriangleAlert, CheckCircle2 } from "lucide-react"
 import { useDataset, BACKEND_URL } from "@/lib/dataset-context"
 import { useAuth } from "@/lib/auth"
+import { toast } from "sonner"
 
 export function DuplicateAnalysis() {
   const { dataset, isUploaded } = useDataset()
@@ -75,7 +76,7 @@ export function DuplicateAnalysis() {
       
     } catch (err) {
       console.error("Error removing duplicates:", err)
-      alert(err instanceof Error ? err.message : "Error removing duplicates")
+      toast.error(err instanceof Error ? err.message : "Error removing duplicates")
     } finally {
       setIsCleaning(false)
     }
