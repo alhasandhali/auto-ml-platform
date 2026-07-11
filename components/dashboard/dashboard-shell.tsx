@@ -9,6 +9,7 @@ import { DatasetPreview } from "./dataset-preview"
 import { ColumnAnalysis } from "./column-analysis"
 import { MissingValues } from "./missing-values"
 import { DuplicateAnalysis } from "./duplicate-analysis"
+import { NoisyData } from "./noisy-data"
 import { DatasetStatistics } from "./dataset-statistics"
 import { ChartsSection } from "./charts-section"
 import { AiInsights } from "./ai-insights"
@@ -32,9 +33,10 @@ export function DashboardShell() {
               <div className="min-w-0 flex-1 space-y-6">
                 <DatasetPreview />
                 <ColumnAnalysis />
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                   <MissingValues />
                   <DuplicateAnalysis />
+                  <NoisyData />
                 </div>
                 <DatasetStatistics />
                 <ChartsSection />
