@@ -11,6 +11,7 @@ import { DatasetPreview } from "@/components/dashboard/dataset-preview"
 import { ColumnAnalysis } from "@/components/dashboard/column-analysis"
 import { MissingValues } from "@/components/dashboard/missing-values"
 import { DuplicateAnalysis } from "@/components/dashboard/duplicate-analysis"
+import { NoisyData } from "@/components/dashboard/noisy-data"
 import { DatasetStatistics } from "@/components/dashboard/dataset-statistics"
 import { ChartsSection } from "@/components/dashboard/charts-section"
 import { AiInsights } from "@/components/dashboard/ai-insights"
@@ -128,9 +129,10 @@ function DatasetsContent() {
             <div className="min-w-0 flex-1 space-y-6">
               <DatasetPreview />
               <ColumnAnalysis />
-              <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                 <MissingValues />
                 <DuplicateAnalysis />
+                <NoisyData />
               </div>
               <DatasetStatistics />
               <ChartsSection />
