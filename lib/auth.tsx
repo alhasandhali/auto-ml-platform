@@ -1,6 +1,7 @@
 "use client"
 
 import React, { createContext, useContext, useEffect, useState } from "react"
+import { toast } from "sonner"
 import { useRouter, usePathname } from "next/navigation"
 import { apiFetch, setGlobalAccessToken, getGlobalAccessToken } from "./api"
 
@@ -39,6 +40,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userData = await response.json()
           setUser(userData)
           setToken(getGlobalAccessToken())
+        } else if (response.status === 503 || response.status === 502 || response.status === 504) {
+          // Backend is offline/starting up
+          toast.loading("Backend is starting up...", { id: "server-startup" })
+          // We DO NOT wipe the token or user state here.
         } else {
           setToken(null)
           setUser(null)
